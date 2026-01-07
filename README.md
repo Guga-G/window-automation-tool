@@ -19,15 +19,15 @@ This script lets me move and center windows across monitors using mouse buttons 
 
 ## Mouse bindings:
 
-### Mouse Button 5**
+### Mouse Button 5
 - Moves the window to the next monitor
 - Centers it on that monitor
 - Preserves window state
 
-### Shift + Mouse Button 5**
+### Shift + Mouse Button 5
 - Centers the window on the current monitor
 
-### Mouse Button 4**
+### Mouse Button 4
 - Restores down the window if needed and maximizes it
 
 ### Key features
