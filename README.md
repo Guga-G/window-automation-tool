@@ -36,7 +36,6 @@ This script lets me move and center windows across monitors using mouse buttons 
 ### Usage:
 - Multi-monitor setups
 - Laptop + external display working environment
-- Fixing poorly positioned popups or tools
 
 ### Requirements
 - Microsoft Windows 10/11
