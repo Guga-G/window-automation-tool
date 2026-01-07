@@ -33,10 +33,6 @@ This script lets me move and center windows across monitors using mouse buttons 
 - Does not interfere with games (World of Warcraft, CS2, VALORANT)
 - Automatically elevates to admin level
 
-### Usage:
-- Multi-monitor setups
-- Laptop + external display working environment
-
 ### Requirements
 - Microsoft Windows 10/11
 - AutoHotkey v2.x
