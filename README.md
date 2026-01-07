@@ -7,7 +7,7 @@ It's not a generic macro. It's state-aware, context-aware and designed to stay o
 
 ### Script
 
-## CenterWindow
+## DualMonitorMoveCenterWindow
 
 Why I created it:
 - Windows often opens dialogs and apps in weird positions
