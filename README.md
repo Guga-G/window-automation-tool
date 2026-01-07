@@ -1,7 +1,7 @@
 # Window Automation Tool (AutoHotkey v2)
 
 I built this AutoHotkey v2 script for myself to improve my daily desktop life across multiple monitors.
-It is practical and lightweight. Focused on fast window placement, multi-monitor support, predictable behavior in games and reliability under frequent use.
+It is practical and lightweight. Focused on fast window placement, multi-monitor support, safe from games and reliability under frequent use.
 It's not a generic macro. It's state-aware, context-aware and designed to stay out of the way when it shouldn't interfere.
 
 
