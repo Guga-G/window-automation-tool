@@ -9,25 +9,25 @@ It's not a generic macro. It's state-aware, context-aware and designed to stay o
 
 ## DualMonitorMoveCenterWindow
 
-Why I created it:
+### Why I created it:
 - Windows often opens dialogs and apps in weird positions
 - Some apps ignore monitor boundaries
 - I wanted an instant, consistent way to move and re-center anything without dragging windows around. I regularly switch between: games (windowed or borderless), browser, folders, development tools.
 
-What it does:
+### What it does:
 This script lets me move and center windows across monitors using mouse buttons without touching the keyboard, breaking fullscreen apps or changing focus.
 
-Mouse bindings:
+## Mouse bindings:
 
-**Mouse Button 5**
+### Mouse Button 5**
 - Moves the window to the next monitor
 - Centers it on that monitor
 - Preserves window state
 
-**Shift + Mouse Button 5**
+### Shift + Mouse Button 5**
 - Centers the window on the current monitor
 
-**Mouse Button 4**
+### Mouse Button 4**
 - Restores down the window if needed and maximizes it
 
 ### Key features
@@ -35,7 +35,7 @@ Mouse bindings:
 - Does not interfere with games (World of Warcraft, CS2, VALORANT)
 - Automatically elevates to admin level
 
-Usage:
+### Usage:
 - Multi-monitor setups
 - Laptop + external display working environment
 - Fixing poorly positioned popups or tools
