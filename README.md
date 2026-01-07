@@ -5,8 +5,6 @@ It is practical and lightweight. Focused on fast window placement, multi-monitor
 It's not a generic macro. It's state-aware, context-aware and designed to stay out of the way when it shouldn't interfere.
 
 
-### Script
-
 ## DualMonitorMoveCenterWindow
 
 ### Why I created it:
