@@ -40,10 +40,10 @@ Usage:
 - Laptop + external display working environment
 - Fixing poorly positioned popups or tools
 
-## Requirements
+### Requirements
 - Microsoft Windows 10/11
 - AutoHotkey v2.x
 - Multi-monitor setup recommended (but not required)
 
-## Notes
+### Notes
 This script was written for my personal comfort, but they are intentionally clean and reusable. Mouse buttons are read at the OS level.
