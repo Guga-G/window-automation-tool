@@ -2,8 +2,38 @@
 #SingleInstance Force
 
 
-; <System setup>
+; CenterWindow.ahk
+; ----------------
+; A lightweight window control tool for multi-monitor setups.
+;
+; Hotkeys:
+;
+; Mouse4 (XButton1)
+; -> Smart restore/maximize toggle
+;    - If window is fullscreen (exampple: Youtube/Twitch): exits fullscreen safely
+;    - If just exited fullscreen: maximizes window
+;    - Otherwise: toggles maximize / restore
+;    - Does NOT steal focus
+;
+; Mouse5 (XButton2)
+; -> Move window to next monitor while preserving usable state
+;    - Restored/normal -> moves to next monitor and stays restored
+;    - Maximized -> moves to next monitor and stays maximized
+;    - Does NOT steal focus
+;
+; Shift + Mouse5
+; -> Center window on current monitor
+;
+; Game Safety:
+; -> All hotkeys are bypassed when a game is active (CS2, Valorant, WoW, etc.)
+; -> Mouse buttons behave normally inside games
+;
+; --------------------------
 
+
+
+; System setup
+; ------------
 if !A_IsAdmin {
     try {
         Run '*RunAs "' A_ScriptFullPath '"'
@@ -16,26 +46,23 @@ ProcessSetPriority("AboveNormal")
 ; Track windows I just exited fullscreen on (Mouse4 logic)
 global FullscreenJustExited := Map()
 
-; =========================
+
 ; Hotkeys (mouse)
-; NOTE: wildcard * forces hook-style handling without v1 directives
-; =========================
+; ---------------
 *XButton1::HandleMouse4()
 *XButton2::HandleMouse5(true)
 *+XButton2::HandleMouse5(false)
 
 
-; <Mouse handlers>
-
+; Mouse handlers
+; --------------
 HandleMouse4() {
     prevActive := WinExist("A")
 
-    ; Determine hovered top level window (works even if inactive)
     hwnd := GetHoveredTopLevelWindowOrActive()
     if !hwnd
         return
 
-    ; Game safety: if hovered is a game or active is a game -> pass through
     if IsGameWindowHwnd(hwnd) || IsGameWindowHwnd(prevActive) {
         Send "{Blind}{XButton1}"
         return
@@ -51,40 +78,73 @@ HandleMouse5(isMove) {
     if !hwnd
         return
 
-    ; Game safety: if hovered is a game or active is a game -> pass through
     if IsGameWindowHwnd(hwnd) || IsGameWindowHwnd(prevActive) {
         Send "{Blind}{XButton2}"
         return
     }
 
-    ; Shift+Mouse5 -> center on same monitor
+    ; Shift+Mouse5 → center on current monitor
     if !isMove {
         CenterWindowOnItsMonitor(hwnd)
         return
     }
 
-    ; Mouse5 -> move to next monitor + center (NO ACTIVATE)
-    cur := GetMonitorIndexOfWindow(hwnd)
+    ; Mouse5 → move to next monitor while preserving restored/maximized state
+    MoveWindowToNextMonitorPreserveState(hwnd, prevActive)
+}
+
+MoveWindowToNextMonitorPreserveState(hwnd, prevActive) {
     count := MonitorGetCount()
     if (count < 2)
         return
 
+    mm := 0
+    try {
+        mm := WinGetMinMax("ahk_id " hwnd)
+    } catch {
+        mm := 0
+    }
+
+    cur := GetMonitorIndexOfWindow(hwnd)
     target := (cur = count) ? 1 : (cur + 1)
+
+    ; Maximized -> restore, move, maximize again
+    if (mm = 1) {
+        try {
+            WinRestore("ahk_id " hwnd)
+        } catch {
+        }
+
+        CenterWindowOnMonitor(hwnd, target)
+
+        try {
+            WinMaximize("ahk_id " hwnd)
+        } catch {
+        }
+
+        if (prevActive && WinExist("A") != prevActive) {
+            try {
+                WinActivate("ahk_id " prevActive)
+            } catch {
+            }
+        }
+        return
+    }
+
+    ; Restored / normal -> move to next monitor + center
     CenterWindowOnMonitor(hwnd, target)
 
-    ; Keep focus on whatever was active before
     if (prevActive && WinExist("A") != prevActive) {
         try {
             WinActivate("ahk_id " prevActive)
-        } catch as e {
-            ; ignore
+        } catch {
         }
     }
 }
 
 
-; <Hovered window getter (top level) with shell filtering>
-
+; Hovered window detection
+; ------------------------
 GetHoveredTopLevelWindowOrActive() {
     MouseGetPos(, , &rawHwnd)
     if !rawHwnd
@@ -97,11 +157,10 @@ GetHoveredTopLevelWindowOrActive() {
     cls := ""
     try {
         cls := WinGetClass("ahk_id " hwnd)
-    } catch as e {
+    } catch {
         cls := ""
     }
 
-    ; Ignore desktop/taskbar shells -> fallback to active
     if (cls = "Shell_TrayWnd" || cls = "WorkerW" || cls = "Progman")
         return WinExist("A")
 
@@ -109,78 +168,99 @@ GetHoveredTopLevelWindowOrActive() {
 }
 
 GetTopLevelHwnd(hwnd) {
-    ; GA_ROOT = 2 (top-level ancestor)
     try {
         return DllCall("GetAncestor", "ptr", hwnd, "uint", 2, "ptr")
-    } catch as e {
+    } catch {
         return 0
     }
 }
 
 
-; <Mouse4: fullscreen-aware restore/maximize without focus stealing>
-
+; Mouse4 logic
+; ------------
 ToggleRestoreMaximize_NoFocus_WithFullscreen(hwnd, prevActive) {
     global FullscreenJustExited
 
     if IsTrueFullscreenWindow(hwnd) {
-        ; Must temporarily activate to reliably send F11/Esc (Chrome style)
         try {
             WinActivate("ahk_id " hwnd)
-        } catch as e {
+        } catch {
             return
         }
+
         Sleep 40
         Send "{F11}"
         Sleep 80
         Send "{Esc}"
         Sleep 80
 
-        try WinRestore("ahk_id " hwnd)
+        try {
+            WinRestore("ahk_id " hwnd)
+        } catch {
+        }
 
         FullscreenJustExited[hwnd] := true
 
         if (prevActive && WinExist("A") != prevActive) {
-            try WinActivate("ahk_id " prevActive)
-            catch as e {
+            try {
+                WinActivate("ahk_id " prevActive)
+            } catch {
             }
         }
+
         return
     }
 
     if FullscreenJustExited.Has(hwnd) {
-        mm := WinGetMinMax("ahk_id " hwnd)
-        if (mm = -1)
-            WinRestore("ahk_id " hwnd)
+        mm := 0
+        try {
+            mm := WinGetMinMax("ahk_id " hwnd)
+        } catch {
+            mm := 0
+        }
 
-        mm2 := WinGetMinMax("ahk_id " hwnd)
-        if (mm2 != 1)
-            WinMaximize("ahk_id " hwnd)
+        if (mm != 1) {
+            try {
+                WinMaximize("ahk_id " hwnd)
+            } catch {
+            }
+        }
 
         FullscreenJustExited.Delete(hwnd)
 
         if (prevActive && WinExist("A") != prevActive) {
-            try WinActivate("ahk_id " prevActive)
-            catch as e {
+            try {
+                WinActivate("ahk_id " prevActive)
+            } catch {
             }
         }
+
         return
     }
 
-    mm := WinGetMinMax("ahk_id " hwnd)
-    if (mm = -1) {
-        WinRestore("ahk_id " hwnd)
+    mm := 0
+    try {
+        mm := WinGetMinMax("ahk_id " hwnd)
+    } catch {
         mm := 0
     }
 
-    if (mm = 1)
-        WinRestore("ahk_id " hwnd)
-    else
-        WinMaximize("ahk_id " hwnd)
+    if (mm = 1) {
+        try {
+            WinRestore("ahk_id " hwnd)
+        } catch {
+        }
+    } else {
+        try {
+            WinMaximize("ahk_id " hwnd)
+        } catch {
+        }
+    }
 
     if (prevActive && WinExist("A") != prevActive) {
-        try WinActivate("ahk_id " prevActive)
-        catch as e {
+        try {
+            WinActivate("ahk_id " prevActive)
+        } catch {
         }
     }
 }
@@ -188,11 +268,17 @@ ToggleRestoreMaximize_NoFocus_WithFullscreen(hwnd, prevActive) {
 IsTrueFullscreenWindow(hwnd) {
     try {
         WinGetPos(&x, &y, &w, &h, "ahk_id " hwnd)
-    } catch as e {
+    } catch {
         return false
     }
 
-    mm := WinGetMinMax("ahk_id " hwnd)
+    mm := 0
+    try {
+        mm := WinGetMinMax("ahk_id " hwnd)
+    } catch {
+        return false
+    }
+
     if (mm = -1)
         return false
 
@@ -207,16 +293,15 @@ IsTrueFullscreenWindow(hwnd) {
 }
 
 
-; <Game detection>
-
+; Game detection
+; --------------
 IsGameWindowHwnd(hwnd) {
     if !hwnd
         return false
 
-    proc := ""
     try {
         proc := StrLower(WinGetProcessName("ahk_id " hwnd))
-    } catch as e {
+    } catch {
         return false
     }
 
@@ -229,8 +314,8 @@ IsGameWindowHwnd(hwnd) {
 }
 
 
-; <Window/monitor helpers>
-
+; Window helpers
+; --------------
 CenterWindowOnItsMonitor(hwnd) {
     CenterWindowOnMonitor(hwnd, GetMonitorIndexOfWindow(hwnd))
 }
