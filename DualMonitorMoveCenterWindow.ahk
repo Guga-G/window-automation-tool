@@ -108,19 +108,9 @@ MoveWindowToNextMonitorPreserveState(hwnd, prevActive) {
     cur := GetMonitorIndexOfWindow(hwnd)
     target := (cur = count) ? 1 : (cur + 1)
 
-    ; Maximized -> restore, move, maximize again
+    ; Maximized -> move via SetWindowPlacement (state never leaves maximized)
     if (mm = 1) {
-        try {
-            WinRestore("ahk_id " hwnd)
-        } catch {
-        }
-
-        CenterWindowOnMonitor(hwnd, target)
-
-        try {
-            WinMaximize("ahk_id " hwnd)
-        } catch {
-        }
+        MoveMaximizedToMonitor(hwnd, target)
 
         if (prevActive && WinExist("A") != prevActive) {
             try {
@@ -316,6 +306,46 @@ IsGameWindowHwnd(hwnd) {
 
 ; Window helpers
 ; --------------
+MoveMaximizedToMonitor(hwnd, monIndex) {
+    ; Directly reposition the maximized window to the target monitor's bounds
+    ; No state change, just move it to the computed coordinates like any normal window
+    WinGetPos(&wx, &wy, &ww, &wh, "ahk_id " hwnd)
+    curMon := GetMonitorIndexOfWindow(hwnd)
+    MonitorGetWorkArea(curMon, &cl, &ct, &cr, &cb)
+    MonitorGetWorkArea(monIndex, &tl, &tt, &tr, &tb)
+
+    ; Border extensions: how far maximized window extends beyond work area
+    bL := cl - wx, bT := ct - wy
+    bR := (wx + ww) - cr, bB := (wy + wh) - cb
+
+    ; Target bounds = target work area expanded by the same borders
+    newX := tl - bL
+    newY := tt - bT
+    newW := (tr - tl) + bL + bR
+    newH := (tb - tt) + bT + bB
+
+    ; Single move, no restore/maximize cycle
+    try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hwnd, "uint", 3, "int*", 1, "uint", 4)
+    WinMove(newX, newY, newW, newH, "ahk_id " hwnd)
+    try DllCall("dwmapi\DwmSetWindowAttribute", "ptr", hwnd, "uint", 3, "int*", 0, "uint", 4)
+
+    ; Update stored normal position so restore/Mouse4 targets the correct monitor
+    wp := Buffer(44, 0)
+    NumPut("uint", 44, wp, 0)
+    if DllCall("GetWindowPlacement", "ptr", hwnd, "ptr", wp) {
+        nL := NumGet(wp, 28, "int"), nT := NumGet(wp, 32, "int")
+        nR := NumGet(wp, 36, "int"), nB := NumGet(wp, 40, "int")
+        nW := nR - nL, nH := nB - nT
+        rL := tl + ((tr - tl - nW) // 2)
+        rT := tt + ((tb - tt - nH) // 2)
+        NumPut("int", rL, wp, 28)
+        NumPut("int", rT, wp, 32)
+        NumPut("int", rL + nW, wp, 36)
+        NumPut("int", rT + nH, wp, 40)
+        DllCall("SetWindowPlacement", "ptr", hwnd, "ptr", wp)
+    }
+}
+
 CenterWindowOnItsMonitor(hwnd) {
     CenterWindowOnMonitor(hwnd, GetMonitorIndexOfWindow(hwnd))
 }
